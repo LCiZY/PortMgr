@@ -21,6 +21,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+
 import com.lc.portmgr.Const;
 import com.lc.portmgr.R;
 import com.lc.portmgr.adapter.PortListAdapter;
@@ -36,7 +37,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-import pl.droidsonroids.gif.GifDrawable;
 import pl.droidsonroids.gif.GifImageView;
 
 public class PortActivity extends AppCompatActivity {
@@ -109,7 +109,10 @@ public class PortActivity extends AppCompatActivity {
             dialog.setView(dialogView);
             ImageButton editBtn =  dialogView.findViewById(R.id.btn_action_edit);
             ImageButton delBtn =  dialogView.findViewById(R.id.btn_action_delete);
-            editBtn.setOnClickListener(v -> showEditAddPortDialog(ports.get(position)));
+            editBtn.setOnClickListener(v -> {
+                dialog.dismiss();
+                showEditAddPortDialog(ports.get(position));
+            });
             delBtn.setOnClickListener(v -> {
                 new AlertDialog.Builder(PortActivity.this)
                         .setTitle("删除确认")
@@ -303,7 +306,8 @@ public class PortActivity extends AppCompatActivity {
     }
 
     public void showEditAddPortDialog(final Port port){
-        String title = port == null ? "添加端口": "编辑端口";
+        boolean isAdd = port == null;
+        String title = isAdd ? "添加端口": "编辑端口";
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle(title).setIcon(R.drawable.port);
 
@@ -323,16 +327,18 @@ public class PortActivity extends AppCompatActivity {
         cancelBtn.setOnClickListener(v -> { dialog.dismiss(); });
         confirmBtn.setOnClickListener(v -> {
             int port_temp = 0;
+            String protocol = "";
             try {
                 port_temp = Integer.parseInt(portEditText.getText().toString().trim());
+                protocol = Const.protocolType[protocolSpinner.getSelectedItemPosition()];
             }catch (Exception e){ toast("端口号无效"); return; }
-            if (port == null && isPortExist(port_temp)){
+            if (isAdd && isPortExist(port_temp, protocol)){
                 toast("端口已存在");
                 return;
             }
 
-            Port p = new Port(server.id, port_temp, descEditText.getText().toString().trim(), portEnableSwitch.isChecked(), Const.protocolType[protocolSpinner.getSelectedItemPosition()]);
-            if (port == null){ // insert
+            Port p = new Port(server.id, port_temp, descEditText.getText().toString().trim(), portEnableSwitch.isChecked(), protocol);
+            if (isAdd){ // insert
                 portDAO.insert(p);
             }else{ // update
                 portDAO.update(p);
@@ -345,9 +351,9 @@ public class PortActivity extends AppCompatActivity {
     }
 
 
-    public boolean isPortExist(int port){
+    public boolean isPortExist(int port, String protocol){
         for (Port p: ports) {
-            if (port == p.port) return true;
+            if (port == p.port && protocol.equals(p.protocol)) return true;
         }
         return false;
     }
